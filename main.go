@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -61,7 +62,7 @@ type Payload struct {
 	c chan notify.EventInfo
 }
 
-func (p Payload) Read() (u *Utmp, err error) {
+func (p Payload) read() (u *Utmp, err error) {
 	type utmp struct {
 		Type int16
 		// alignment
@@ -99,6 +100,10 @@ func (p Payload) Read() (u *Utmp, err error) {
 	u.Addr = u_.AddrV6[:]
 	return
 }
+func (p Payload) Read() (u *Utmp, err error) {
+	<-p.c
+	return p.read()
+}
 func NewPayload(file string) (*Payload, error) {
 	c := make(chan notify.EventInfo, 1)
 	err := notify.Watch(file, c, notify.Write)
@@ -116,6 +121,23 @@ func NewPayload(file string) (*Payload, error) {
 	return &Payload{f, c}, nil
 }
 func main() {
+	input := flag.String("input", "", "utmp file input, like /var/log/wtmp")
+	output := flag.String("output", "", "output file, if empty, output to stdout")
+
+	if *input == "" {
+		fmt.Println("Need a input file")
+		os.Exit(1)
+	}
+	out := os.Stdout
+	if *output != "" {
+		var err error
+		out, err = os.Open(*output)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+	var formater func(*Utmp) string = Default
 	p, err := NewPayload(os.Args[1])
 	if err != nil {
 		panic(err)
@@ -125,6 +147,13 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Printf("%v\n", u)
+		_, err = out.WriteString(formater(u))
+		if err != nil {
+			panic(err)
+		}
 	}
+}
+func Default(u *Utmp) string {
+	t := u.Time.Format(time.DateTime)
+	return fmt.Sprintf("%d,%d,%s,%s,%s,%s", u.Type, u.Pid, u.Device, u.Id, u.Host, t)
 }
