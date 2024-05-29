@@ -121,9 +121,9 @@ func NewPayload(file string) (*Payload, error) {
 	return &Payload{f, c}, nil
 }
 func main() {
-	input := flag.String("input", "", "utmp file input, like /var/log/wtmp")
-	output := flag.String("output", "", "output file, if empty, output to stdout")
-
+	input := flag.String("i", "", "utmp file input, like /var/log/wtmp")
+	output := flag.String("o", "", "output file, if empty, output to stdout")
+	flag.Parse()
 	if *input == "" {
 		fmt.Println("Need a input file")
 		os.Exit(1)
@@ -138,7 +138,7 @@ func main() {
 		}
 	}
 	var formater func(*Utmp) string = Default
-	p, err := NewPayload(os.Args[1])
+	p, err := NewPayload(*input)
 	if err != nil {
 		panic(err)
 	}
@@ -155,5 +155,5 @@ func main() {
 }
 func Default(u *Utmp) string {
 	t := u.Time.Format(time.DateTime)
-	return fmt.Sprintf("%d,%d,%s,%s,%s,%s", u.Type, u.Pid, u.Device, u.Id, u.Host, t)
+	return fmt.Sprintf("%d,%d,%s,%s,%s,%s,%s", u.Type, u.Pid, u.Device, u.User, u.Id, u.Host, t)
 }
