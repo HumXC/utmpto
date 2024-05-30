@@ -141,9 +141,6 @@ func main() {
 	output := flag.String("o", "", "output file, if empty, output to stdout")
 	isStartFileBeginning := flag.Bool("s", false, "Start with the file at the beginning.")
 
-	*input = "btmp"
-	*isStartFileBeginning = true
-
 	flag.Parse()
 	if *input == "" {
 		fmt.Println("Need a input file")
